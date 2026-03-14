@@ -878,7 +878,8 @@ def main(page: ft.Page):
                      "pdf":False,
                      "pdf_viztxt":False,
                      "selected_output_path":None,
-                     "prompt":""
+                     "prompt":"",
+                     "pdf_dpi":300
                      }
     load_obj={}
     if os.path.exists("userconf.yaml"):
@@ -1157,7 +1158,7 @@ def main(page: ft.Page):
                     #pdfarray = doc.render(pypdfium2.PdfBitmap.to_pil,scale=100 / 72)
                     pdfarray=doc.render(pypdfium2.PdfBitmap.to_pil,
                                             page_indices = [i for i in range(len(doc))],
-                                            scale = 100/72)
+                                            scale = config_obj["pdf_dpi"]/72)
                     for ix,image in enumerate(list(pdfarray)):
                         outputtmppath=os.path.join(os.getcwd(),PDFTMPPATH,"{}_{:05}.jpg".format(filestem,ix))
                         inputpathlist.append(outputtmppath)
@@ -1249,7 +1250,7 @@ def main(page: ft.Page):
                             pdfarray = doc.render(
                                 pypdfium2.PdfBitmap.to_pil,
                                 page_indices=[i for i in range(len(doc))],
-                                scale=100/72
+                                scale=config_obj["pdf_dpi"]/72
                             )
                             
                             for ix, image in enumerate(list(pdfarray)):
@@ -1341,6 +1342,7 @@ def main(page: ft.Page):
                 "tei":chkbx_tei.value,
                 "pdf":chkbx_pdf.value,
                 "pdf_viztxt":chkbx_pdf_viztxt.value,
+                "pdf_dpi":int(pdf_dpi_radio_group.value),
             })
             save_config()
             page.close(customize_dlg_modal)
@@ -1368,6 +1370,15 @@ def main(page: ft.Page):
         chkbx_tei = ft.Checkbox(label="TEI形式", value=config_obj["tei"])
         chkbx_pdf = ft.Checkbox(label="透明テキスト付PDF(ベータ)", value=config_obj["pdf"],on_change=change_pdfstatus)
         chkbx_pdf_viztxt = ft.Checkbox(label="PDFに青色で文字を重ねる", value=config_obj["pdf_viztxt"],disabled=not chkbx_pdf.value)
+        pdf_dpi_radio_group = ft.RadioGroup(
+            value=str(config_obj.get("pdf_dpi", 300)),
+            content=ft.Row([
+                ft.Text(TRANSLATIONS["customize_pdf_dpi_label"][config_obj["langcode"]]),
+                ft.Radio(value="100", label="100 DPI"),
+                ft.Radio(value="300", label="300 DPI"),
+                ft.Radio(value="600", label="600 DPI"),
+            ])
+        )
 
         
         file_upload_btn=ft.ElevatedButton(
@@ -1424,6 +1435,7 @@ def main(page: ft.Page):
                 chkbx_json,
                 ft.Row([chkbx_xml,chkbx_tei]),
                 ft.Row([chkbx_pdf,chkbx_pdf_viztxt]),
+                pdf_dpi_radio_group,
                 ft.TextButton("OK", on_click=handle_customize_dlg_modal_close),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
