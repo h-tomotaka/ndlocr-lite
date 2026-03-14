@@ -102,5 +102,9 @@ TRANSLATIONS = {
     "common_close":{
         "ja":"閉じる",
         "en":"Close",
+    },
+    "customize_pdf_dpi_label":{
+        "ja":"PDFラスタライズDPI:",
+        "en":"PDF Rasterize DPI:",
     }
 }
