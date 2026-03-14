@@ -1,0 +1,93 @@
+name: Build macOS DMG
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ndlocr-lite-gui/requirements-build.txt
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Copy OCR engine into GUI directory
+        run: cp -r src ndlocr-lite-gui/src
+
+      - name: Build macOS .app with Flet
+        run: |
+          cd ndlocr-lite-gui
+          flet build macos \
+            --output ../macos \
+            --project "NDLOCR-Lite" \
+            --product "NDLOCR-Lite"
+
+      - name: Set icon
+        run: |
+          ICON="ndlocr-lite-gui/assets/icon.png"
+          APP_PATH="macos/NDLOCR-Lite.app"
+          ICONSET_DIR="$(mktemp -d)/AppIcon.iconset"
+          mkdir -p "$ICONSET_DIR"
+          for SIZE in 16 32 64 128 256 512; do
+            sips -z $SIZE $SIZE "$ICON" --out "$ICONSET_DIR/icon_${SIZE}x${SIZE}.png" > /dev/null
+            sips -z $((SIZE*2)) $((SIZE*2)) "$ICON" --out "$ICONSET_DIR/icon_${SIZE}x${SIZE}@2x.png" > /dev/null
+          done
+          iconutil -c icns "$ICONSET_DIR" -o /tmp/AppIcon.icns
+          ICNS_DST="$APP_PATH/Contents/Resources/AppIcon.icns"
+          if [ -f "$ICNS_DST" ]; then
+            cp /tmp/AppIcon.icns "$ICNS_DST"
+          fi
+
+      - name: Create DMG
+        run: |
+          create-dmg \
+            --volname "NDLOCR-Lite" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "NDLOCR-Lite.app" 150 180 \
+            --hide-extension "NDLOCR-Lite.app" \
+            --app-drop-link 450 180 \
+            NDLOCR-Lite.dmg \
+            macos/
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NDLOCR-Lite-dmg
+          path: NDLOCR-Lite.dmg
+          retention-days: 30
+
+      - name: Upload DMG to Release
+        if: github.event_name == 'release'
+        run: gh release upload ${{ github.ref_name }} NDLOCR-Lite.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

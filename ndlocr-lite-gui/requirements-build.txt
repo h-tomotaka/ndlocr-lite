@@ -1,0 +1,9 @@
+# Build dependencies for macOS DMG packaging
+# Install with: pip install -r requirements-build.txt
+
+# Flet build toolchain (required for flet build macos)
+flet[all]==0.27.6
+
+# create-dmg is a shell tool installed via Homebrew (not a pip package).
+# Install on macOS with:
+#   brew install create-dmg
